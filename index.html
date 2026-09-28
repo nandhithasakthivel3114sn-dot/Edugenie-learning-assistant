@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EduGenie - AI Learning Assistant</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --bg: #f4f5fb;
+    --card: #ffffff;
+    --text: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 24px;
+    text-align: center;
+  }
+  header h1 { margin: 0; font-size: 28px; }
+  header p { margin: 4px 0 0; opacity: 0.9; }
+
+  .container {
+    max-width: 800px;
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    background: var(--card);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .tab.active {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .panel {
+    display: none;
+    background: var(--card);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .panel.active { display: block; }
+
+  textarea, input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    margin-bottom: 10px;
+    resize: vertical;
+  }
+  button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .result {
+    margin-top: 16px;
+    padding: 14px;
+    background: #f9fafb;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+  .quiz-q { margin-bottom: 14px; }
+  .quiz-q p { font-weight: 600; margin-bottom: 6px; }
+  .quiz-q label { display: block; margin: 4px 0; padding: 4px 8px; border-radius: 6px; }
+  .quiz-q label.correct { background: #d1fae5; color: #065f46; font-weight: 600; }
+  .quiz-q label.wrong { background: #fee2e2; color: #991b1b; font-weight: 600; }
+  .quiz-feedback { font-size: 13px; margin-top: 4px; font-style: italic; }
+  #submitQuizBtn { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EduGenie</h1>
+  <p>Google Gemini Powered Learning Assistant</p>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" data-tab="qa">Q&amp;A</div>
+    <div class="tab" data-tab="summary">Summarize</div>
+    <div class="tab" data-tab="quiz">Quiz</div>
+  </div>
+
+  <!-- Q&A Panel -->
+  <div class="panel active" id="qa">
+    <textarea id="qaInput" rows="3" placeholder="Ask any question..."></textarea>
+    <button onclick="askQuestion()">Get Answer</button>
+    <div class="result" id="qaResult"></div>
+  </div>
+
+  <!-- Summary Panel -->
+  <div class="panel" id="summary">
+    <textarea id="summaryInput" rows="6" placeholder="Paste text to summarize..."></textarea>
+    <button onclick="summarizeText()">Summarize</button>
+    <div class="result" id="summaryResult"></div>
+  </div>
+
+  <!-- Quiz Panel -->
+  <div class="panel" id="quiz">
+    <input id="quizTopic" placeholder="Topic (e.g. Photosynthesis)" />
+    <input id="quizCount" type="number" value="5" min="1" max="10" placeholder="Number of questions" />
+    <button onclick="generateQuiz()">Generate Quiz</button>
+    <div class="result" id="quizResult"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = ""; // same origin
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab).classList.add("active");
+  });
+});
+
+async function askQuestion() {
+  const question = document.getElementById("qaInput").value.trim();
+  const resultBox = document.getElementById("qaResult");
+  if (!question) return;
+  resultBox.textContent = "Thinking...";
+  try {
+    const res = await fetch(`${API_BASE}/api/qa`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    const data = await res.json();
+    resultBox.textContent = data.answer || data.detail || "No response";
+  } catch (e) {
+    resultBox.textContent = "Error: " + e.message;
+  }
+}
+
+async function summarizeText() {
+  const text = document.getElementById("summaryInput").value.trim();
+  const resultBox = document.getElementById("summaryResult");
+  if (!text) return;
+  resultBox.textContent = "Summarizing...";
+  try {
+    const res = await fetch(`${API_BASE}/api/summarize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    resultBox.textContent = data.summary || data.detail || "No response";
+  } catch (e) {
+    resultBox.textContent = "Error: " + e.message;
+  }
+}
+
+async function generateQuiz() {
+  const topic = document.getElementById("quizTopic").value.trim();
+  const num_questions = parseInt(document.getElementById("quizCount").value) || 5;
+  const resultBox = document.getElementById("quizResult");
+  if (!topic) return;
+  resultBox.textContent = "Generating quiz...";
+  try {
+    const res = await fetch(`${API_BASE}/api/quiz`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, num_questions })
+    });
+    const data = await res.json();
+    if (!data.quiz) {
+      resultBox.textContent = data.detail || "No response";
+      return;
+    }
+    resultBox.innerHTML = "";
+    data.quiz.forEach((q, i) => {
+      const div = document.createElement("div");
+      div.className = "quiz-q";
+      let optionsHtml = q.options.map(opt =>
+        `<label data-option="${opt}"><input type="radio" name="q${i}" value="${opt}"> ${opt}</label>`
+      ).join("");
+      div.innerHTML = `<p>${i + 1}. ${q.question}</p>${optionsHtml}<div class="quiz-feedback" id="feedback${i}"></div>`;
+      div.dataset.answer = q.answer;
+      resultBox.appendChild(div);
+    });
+
+    const submitBtn = document.createElement("button");
+    submitBtn.id = "submitQuizBtn";
+    submitBtn.textContent = "Submit Answers";
+    submitBtn.onclick = () => checkQuizAnswers(data.quiz);
+    resultBox.appendChild(submitBtn);
+  } catch (e) {
+    resultBox.textContent = "Error: " + e.message;
+  }
+}
+
+function checkQuizAnswers(quiz) {
+  let score = 0;
+  const questionDivs = document.querySelectorAll(".quiz-q");
+  questionDivs.forEach((div, i) => {
+    const correctAnswer = div.dataset.answer;
+    const selected = div.querySelector(`input[name="q${i}"]:checked`);
+    const feedback = document.getElementById(`feedback${i}`);
+    const labels = div.querySelectorAll("label");
+
+    labels.forEach(label => {
+      label.classList.remove("correct", "wrong");
+      const opt = label.dataset.option;
+      if (opt === correctAnswer) {
+        label.classList.add("correct");
+      } else if (selected && opt === selected.value && opt !== correctAnswer) {
+        label.classList.add("wrong");
+      }
+    });
+
+    if (!selected) {
+      feedback.textContent = `⚠ Not answered. Correct answer: ${correctAnswer}`;
+      feedback.style.color = "#b45309";
+    } else if (selected.value === correctAnswer) {
+      feedback.textContent = "✓ Correct!";
+      feedback.style.color = "#065f46";
+      score++;
+    } else {
+      feedback.textContent = `✗ Wrong. Correct answer: ${correctAnswer}`;
+      feedback.style.color = "#991b1b";
+    }
+  });
+
+  const submitBtn = document.getElementById("submitQuizBtn");
+  submitBtn.textContent = `Score: ${score} / ${questionDivs.length} — Click to re-check`;
+}
+</script>
+
+</body>
+</html>
